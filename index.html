@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar → Jotty</title>
+<style>
+  :root {
+    --bg: #0f0f14;
+    --surface: #18181f;
+    --surface2: #1f1f28;
+    --border: #2a2a35;
+    --text: #e4e4ec;
+    --text2: #8888a0;
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --green: #00cec9;
+    --red: #ff6b6b;
+    --orange: #fdcb6e;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 520px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
+  }
+  .logo svg { width:28px; height:28px; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
+  .status-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+  /* Config bar */
+  .config-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .config-bar input {
+    flex: 1;
+    min-width: 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .config-bar input:focus { border-color: var(--accent); }
+  .config-bar input::placeholder { color: var(--text2); }
+  .config-bar label {
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 4px;
+  }
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn.ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .btn.ghost:hover { border-color: var(--accent); color: var(--text); }
+  .btn.small { padding: 6px 12px; font-size: 12px; }
+  .btn.danger { background: var(--red); }
+  .btn.danger:hover { background: #ff5252; }
+
+  /* Calendar */
+  .calendar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cal-header .month-year {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+  .nav-btn {
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+  }
+  .nav-btn:hover { color: var(--text); background: var(--surface2); }
+  .nav-btn svg { width: 20px; height: 20px; }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    padding: 0;
+  }
+  .day-label {
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .day-cell {
+    min-height: 72px;
+    padding: 6px 8px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+  .day-cell:nth-child(7n) { border-right: none; }
+  .day-cell:hover { background: var(--surface2); }
+  .day-cell.other-month { opacity: 0.3; pointer-events: none; }
+  .day-cell.today .day-number {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .day-cell.selected { background: rgba(108,92,231,0.12); }
+  .day-number {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    width: 26px;
+    height: 26px;
+  }
+  .task-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+    flex-shrink: 0;
+  }
+  .task-dot.more {
+    width: auto; padding: 0 4px;
+    background: none;
+    color: var(--text2);
+    font-size: 10px;
+    line-height: 6px;
+  }
+
+  /* Panel */
+  .panel {
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: none;
+  }
+  .panel.open { display: block; }
+  .panel-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-header h3 {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .panel-body { padding: 12px 16px; }
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .task-item:last-child { border-bottom: none; }
+  .task-item .check-btn {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .task-item .check-btn.checked {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .task-item .check-btn.checked::after {
+    content: '✓';
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .task-item .task-text {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .task-item .task-text.done {
+    text-decoration: line-through;
+    color: var(--text2);
+  }
+  .task-item .del-btn {
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.2s;
+  }
+  .task-item:hover .del-btn { opacity: 1; }
+  .task-item .del-btn:hover { color: var(--red); background: rgba(255,107,107,0.1); }
+
+  .add-task {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .add-task input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .add-task input:focus { border-color: var(--accent); }
+  .add-task input::placeholder { color: var(--text2); }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text2);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 13px;
+    color: var(--text);
+    box-shadow: var(--shadow);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { border-color: var(--red); }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    body { padding: 16px 8px; }
+    .day-cell { min-height: 56px; padding: 4px 5px; }
+    .day-number { width: 22px; height: 22px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <circle cx="12" cy="15" r="1" fill="var(--accent2)"/>
+        <circle cx="17" cy="15" r="1" fill="var(--accent2)"/>
+      </svg>
+      Calendar → Jotty
+    </div>
+    <div class="status-dot" id="statusDot"></div>
+  </div>
+
+  <!-- Config -->
+  <div class="config-bar">
+    <label>Jotty URL</label>
+    <input type="text" id="jottyUrl" placeholder="https://jotty.example.com" />
+    <label>API Key</label>
+    <input type="password" id="apiKey" placeholder="ck_..." />
+    <button class="btn ghost small" id="saveBtn" title="Save config">Save</button>
+  </div>
+
+  <!-- Calendar -->
+  <div class="calendar">
+    <div class="cal-header">
+      <button class="nav-btn" id="prevMonth">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="month-year" id="monthYear"></span>
+      <button class="nav-btn" id="nextMonth">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- Task Panel -->
+  <div class="panel" id="taskPanel">
+    <div class="panel-header">
+      <h3 id="panelTitle">Tasks</h3>
+      <button class="btn ghost small" id="closePanel">Close</button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+const DEFAULT_CHECKLIST_TITLE = '📅 Calendar Tasks';
+let state = {
+  url: '',
+  key: '',
+  checklistId: null,
+  checklistType: 'simple', // 'simple' | 'task'
+  viewDate: new Date(),
+  selectedDate: null,
+  tasks: [], // { index, text, completed, id }
+  loading: false,
+};
+
+// ── DOM refs ──
+const $ = id => document.getElementById(id);
+const jottyUrl = $('jottyUrl');
+const apiKey  = $('apiKey');
+const saveBtn = $('saveBtn');
+const calGrid  = $('calGrid');
+const monthYear = $('monthYear');
+const prevMonth = $('prevMonth');
+const nextMonth = $('nextMonth');
+const taskPanel = $('taskPanel');
+const panelTitle = $('panelTitle');
+const panelBody = $('panelBody');
+const closePanel = $('closePanel');
+const statusDot = $('statusDot');
+const toastEl = $('toast');
+
+// ── Toast ──
+let toastTimer;
+function toast(msg, isError = false) {
+  toastEl.textContent = msg;
+  toastEl.classList.toggle('error', isError);
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2500);
+}
+
+// ── Persistence ──
+function loadConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('jotty-cal-config') || '{}');
+    if (saved.url) jottyUrl.value = saved.url;
+    if (saved.key) apiKey.value = saved.key;
+    if (saved.checklistId) state.checklistId = saved.checklistId;
+    if (saved.checklistType) state.checklistType = saved.checklistType;
+  } catch(e) {}
+}
+function saveConfig() {
+  state.url = jottyUrl.value.trim().replace(/\/+$/, '');
+  state.key = apiKey.value.trim();
+  localStorage.setItem('jotty-cal-config', JSON.stringify({
+    url: state.url, key: state.key,
+    checklistId: state.checklistId, checklistType: state.checklistType,
+  }));
+}
+
+loadConfig();
+
+// ── API ──
+async function jottyFetch(path, opts = {}) {
+  const url = state.url + path;
+  const headers = { 'x-api-key': state.key, 'Content-Type': 'application/json' };
+  const res = await fetch(url, { ...opts, headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+// ── Checklist management ──
+async function findOrCreateChecklist() {
+  if (state.checklistId) {
+    // Verify it still exists
+    try {
+      const data = await jottyFetch(`/api/checklists/${state.checklistId}`);
+      if (data.success && data.data) return data.data;
+    } catch(e) {
+      state.checklistId = null;
+    }
+  }
+  // Search for existing calendar checklist
+  const lists = await jottyFetch('/api/checklists');
+  let match = lists.checklists?.find(c => c.title === DEFAULT_CHECKLIST_TITLE);
+  if (match) {
+    state.checklistId = match.id;
+    state.checklistType = match.type;
+    saveConfig();
+    return match;
+  }
+  // Create new
+  const created = await jottyFetch('/api/checklists', {
+    method: 'POST',
+    body: JSON.stringify({ title: DEFAULT_CHECKLIST_TITLE, type: 'simple' }),
+  });
+  if (!created.success) throw new Error('Failed to create checklist');
+  state.checklistId = created.data.id;
+  state.checklistType = created.data.type;
+  saveConfig();
+  return created.data;
+}
+
+// ── Task CRUD ──
+async function fetchTasksForDate(dateStr) {
+  if (!state.checklistId) return [];
+  const list = await jottyFetch(`/api/checklists/${state.checklistId}`);
+  if (!list.checklists?.length) return [];
+  const cl = list.checklists[0];
+  const prefix = dateStr + ': ';
+  const items = cl.items?.filter(i => i.text?.startsWith(prefix)) || [];
+  return items.map(i => ({
+    index: i.index,
+    text: i.text.slice(prefix.length),
+    completed: i.completed || false,
+    id: i.id,
+  }));
+}
+
+async function addTask(dateStr, text) {
+  if (!state.checklistId) await findOrCreateChecklist();
+  const body = { text: `${dateStr}: ${text.trim()}` };
+  if (state.checklistType === 'task') {
+    body.status = 'in_progress';
+    body.time = 0;
+  }
+  await jottyFetch(`/api/checklists/${state.checklistId}/items`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+async function toggleTask(listId, itemIndex, setCompleted) {
+  const path = setCompleted
+    ? `/api/checklists/${listId}/items/${itemIndex}/check`
+    : `/api/checklists/${listId}/items/${itemIndex}/uncheck`;
+  await jottyFetch(path, { method: 'PUT' });
+}
+
+async function deleteTask(listId, itemIndex) {
+  await jottyFetch(`/api/checklists/${listId}/items/${itemIndex}`, {
+    method: 'DELETE',
+  });
+}
+
+// ── Calendar rendering ──
+const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function dateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function renderCalendar(tasksByDate) {
+  const d = new Date(state.viewDate);
+  d.setDate(1);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+
+  // Header
+  const months = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  monthYear.textContent = `${months[month]} ${year}`;
+
+  // Grid
+  let html = '';
+  DAY_LABELS.forEach(l => { html += `<div class="day-label">${l}</div>`; });
+
+  const firstDay = d.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrev = new Date(year, month, 0).getDate();
+
+  const today = new Date();
+  const todayStr = dateStr(today);
+
+  // Previous month padding
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const day = daysInPrev - i;
+    const date = new Date(year, month - 1, day);
+    html += `<div class="day-cell other-month"><span class="day-number">${day}</span></div>`;
+  }
+
+  // Current month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const ds = dateStr(date);
+    const isToday = ds === todayStr;
+    const isSelected = state.selectedDate === ds;
+    const tasks = tasksByDate[ds] || [];
+    const completed = tasks.filter(t => t.completed).length;
+    const pending = tasks.length - completed;
+
+    let dotHtml = '';
+    if (tasks.length > 0) {
+      if (tasks.length <= 3) {
+        tasks.forEach(t => {
+          dotHtml += `<div class="task-dot" style="background:${t.completed ? 'var(--green)' : 'var(--accent2)'}"></div>`;
+        });
+      } else {
+        dotHtml += `<div class="task-dot more">+${tasks.length}</div>`;
+      }
+    }
+
+    html += `<div class="day-cell${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}"
+                  data-date="${ds}">
+              <span class="day-number">${day}</span>
+              ${dotHtml}
+            </div>`;
+  }
+
+  // Next month padding
+  const totalCells = firstDay + daysInMonth;
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let day = 1; day <= remaining; day++) {
+    html += `<div class="day-cell other-month"><span class="day-number">${day}</span></div>`;
+  }
+
+  calGrid.innerHTML = html;
+
+  // Click handlers
+  calGrid.querySelectorAll('.day-cell:not(.other-month)').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const ds = cell.dataset.date;
+      state.selectedDate = ds;
+      renderCalendar(tasksByDate);
+      openTaskPanel(ds, tasksByDate[ds] || []);
+    });
+  });
+}
+
+// ── Task panel ──
+async function openTaskPanel(dateStr, tasks) {
+  state.tasks = tasks;
+  panelTitle.textContent = `${dateStr} — ${tasks.length} task${tasks.length !== 1 ? 's' : ''}`;
+  taskPanel.classList.add('open');
+
+  let html = '';
+  if (tasks.length === 0) {
+    html = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <div>No tasks yet for this day.</div>
+      <div style="font-size:12px;margin-top:4px;">Add one below.</div>
+    </div>`;
+  } else {
+    tasks.forEach(t => {
+      const idx = t.index;
+      html += `<div class="task-item" data-index="${idx}">
+        <div class="check-btn${t.completed ? ' checked' : ''}" data-index="${idx}"></div>
+        <span class="task-text${t.completed ? ' done' : ''}">${escHtml(t.text)}</span>
+        <button class="del-btn" data-index="${idx}" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>`;
+    });
+  }
+
+  html += `<div class="add-task">
+    <input type="text" id="newTaskInput" placeholder="Add a task..." maxlength="200" />
+    <button class="btn small" id="addTaskBtn">Add</button>
+  </div>`;
+
+  panelBody.innerHTML = html;
+
+  // Check/uncheck
+  panelBody.querySelectorAll('.check-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.index);
+      const task = state.tasks.find(t => t.index === idx);
+      if (!task) return;
+      const setCompleted = !task.completed;
+      btn.classList.toggle('checked', setCompleted);
+      btn.closest('.task-item').querySelector('.task-text')
+        .classList.toggle('done', setCompleted);
+      try {
+        await toggleTask(state.checklistId, idx, setCompleted);
+        task.completed = setCompleted;
+        renderCalendar(getTasksByDate());
+      } catch(e) {
+        toast('Failed to update task', true);
+      }
+    });
+  });
+
+  // Delete
+  panelBody.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.index);
+      try {
+        await deleteTask(state.checklistId, idx);
+        state.tasks = state.tasks.filter(t => t.index !== idx);
+        renderCalendar(getTasksByDate());
+        openTaskPanel(dateStr, state.tasks);
+        toast('Task deleted');
+      } catch(e) {
+        toast('Failed to delete task', true);
+      }
+    });
+  });
+
+  // Add task
+  const newInput = $('newTaskInput');
+  const addBtn = $('addTaskBtn');
+  if (newInput && addBtn) {
+    const doAdd = async () => {
+      const text = newInput.value.trim();
+      if (!text) return;
+      newInput.value = '';
+      try {
+        await addTask(dateStr, text);
+        state.tasks = await fetchTasksForDate(dateStr);
+        renderCalendar(getTasksByDate());
+        openTaskPanel(dateStr, state.tasks);
+        toast('Task added');
+      } catch(e) {
+        toast('Failed to add task: ' + e.message, true);
+      }
+    };
+    addBtn.addEventListener('click', doAdd);
+    newInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') doAdd();
+    });
+    setTimeout(() => newInput.focus(), 50);
+  }
+}
+
+closePanel.addEventListener('click', () => {
+  taskPanel.classList.remove('open');
+  state.selectedDate = null;
+});
+
+// ── Helpers ──
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function getTasksByDate() {
+  // Re-fetch all and group by date prefix
+  if (!state.checklistId) return {};
+  const list = await jottyFetch(`/api/checklists/${state.checklistId}`);
+  if (!list.checklists?.length) return {};
+  const items = list.checklists[0].items || [];
+  const map = {};
+  items.forEach(i => {
+    const m = i.text?.match(/^(\d{4}-\d{2}-\d{2}):\s*/);
+    if (m) {
+      const ds = m[1];
+      if (!map[ds]) map[ds] = [];
+      map[ds].push({ index: i.index, text: i.text.slice(m[0].length), completed: i.completed || false, id: i.id });
+    }
+  });
+  return map;
+}
+
+// ── Navigation ──
+function navigate(delta) {
+  const d = new Date(state.viewDate);
+  d.setMonth(d.getMonth() + delta);
+  state.viewDate = d;
+  refresh();
+}
+
+prevMonth.addEventListener('click', () => navigate(-1));
+nextMonth.addEventListener('click', () => navigate(1));
+
+// ── Refresh ──
+async function refresh() {
+  if (!state.url || !state.key) {
+    renderCalendar({});
+    return;
+  }
+  try {
+    statusDot.classList.remove('offline');
+    await findOrCreateChecklist();
+    const byDate = await getTasksByDate();
+    renderCalendar(byDate);
+    // If a date is selected, refresh its panel
+    if (state.selectedDate && byDate[state.selectedDate]) {
+      openTaskPanel(state.selectedDate, byDate[state.selectedDate]);
+    }
+  } catch(e) {
+    statusDot.classList.add('offline');
+    renderCalendar({});
+    toast('Jotty: ' + e.message, true);
+  }
+}
+
+// ── Save config ──
+saveBtn.addEventListener('click', async () => {
+  saveConfig();
+  if (state.url && state.key) {
+    toast('Config saved. Connecting...');
+    await refresh();
+  } else {
+    toast('Enter Jotty URL and API key');
+  }
+});
+
+// Enter key in config inputs
+[jottyUrl, apiKey].forEach(el => {
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveBtn.click();
+  });
+});
+
+// ── Init ──
+refresh();
+// Auto-refresh every 30s
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>

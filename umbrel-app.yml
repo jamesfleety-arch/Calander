@@ -1,0 +1,23 @@
+name: Jotty Calendar
+description: |
+  A sleek monthly calendar app that integrates with your Jotty instance.
+  Click any date to add, check, uncheck, or delete tasks — all synced via
+  Jotty's REST API. Tasks are prefixed with the date (YYYY-MM-DD: task) and
+  stored in a shared "📅 Calendar Tasks" checklist.
+
+  Features:
+  - Monthly calendar grid with smooth navigation
+  - Click any date to view/add tasks in a side panel
+  - Check/uncheck/delete tasks with live sync to Jotty
+  - Auto-refresh every 30 seconds
+  - Dark theme with CSS custom properties
+  - Config persists in browser localStorage
+
+  Setup:
+  1. Enter your Jotty URL and API key in the config bar
+  2. Click Save (config is stored in localStorage)
+  3. Click any date to start managing tasks
+
+  Your Jotty API key is generated at: Profile → Settings → API Key → Generate
+version: "1.1.0"
+icon: icon.png
